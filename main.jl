@@ -120,7 +120,7 @@ function MCHMCℓπ_grad(x)
 end
 
 target = CustomTarget(MCHMCℓπ, MCHMCℓπ_grad, θ₀)
-spl = MicroCanonicalHMC.MCHMC(mchmc_nadapt, 0.0001, integrator="LF", adaptive=true, tuen_eps=true, tune_L=true, tune_sigma=true)
+spl = MicroCanonicalHMC.MCHMC(mchmc_nadapt, 0.0001, integrator="LF", adaptive=true, tune_eps=true, tune_L=false, tune_sigma=true, L=sqrt(d))
 
 println("MCHMC sampling")
 t = time()
