@@ -89,7 +89,7 @@ println("HMC sampling")
 t = time()
 samples_HMC, stats_HMC = sample(ham, kernel, θ₀, n_samples+2_000, adaptor, 2_000; drop_warmup = true, progress=true, verbose=true)
 HMC_t = time()-t
-CSV.write("chains_storage/HMC_chain_nside_$nside.csv", permutedims(DataFrame(samples_HMC[1:n_samples], :auto)))
+CSV.write("HMC_chain_nside_$nside.csv", permutedims(DataFrame(samples_HMC[1:n_samples], :auto)))
 
 # NUTS
 metric = DiagEuclideanMetric(d)
@@ -104,7 +104,7 @@ println("NUTS sampling")
 t = time()
 samples_NUTS, stats_NUTS = sample(ham, kernel, θ₀, n_samples+500, adaptor, 500; drop_warmup = true, progress=true, verbose=true)
 NUTS_t = time()-t
-CSV.write("chains_storage/NUTS_chain_nside_$nside.csv", permutedims(DataFrame(samples_NUTS[1:n_samples], :auto)))
+CSV.write("NUTS_chain_nside_$nside.csv", permutedims(DataFrame(samples_NUTS[1:n_samples], :auto)))
 
 # MCHMC
 mchmc_nsamples = 10_000
@@ -126,7 +126,7 @@ println("MCHMC sampling")
 t = time()
 samples_MCHMC = Sample(spl, target, mchmc_nsamples, init_params=θ₀, dialog=true)#, thinning=10)
 MCHMC_t = time()-t
-CSV.write("chains_storage/MCHMC_chain_nside_$nside.csv", permutedims(DataFrame(samples_MCHMC, :auto)))
+CSV.write("MCHMC_chain_nside_$nside.csv", permutedims(DataFrame(samples_MCHMC, :auto)))
 
 # STATISTICS
 HMC_ess, HMC_rhat = Summarize(samples_HMC)
@@ -154,13 +154,13 @@ p = plot(layout=(1,3), plot_title="Gelman-Rubin", size=(1000,400))
 histogram!(p, HMC_rhat, label="HMC", subplot=1, color="coral2")
 histogram!(p, NUTS_rhat, label="NUTS", subplot=2)
 histogram!(p, MCHMC_rhat[1:end-3], label="MCHMC", subplot=3, color="blue2")
-savefig("plots/GR_plot_nside_$nside.pdf")
+savefig("GR_plot_nside_$nside.pdf")
 
 p = plot(layout=(1,3), plot_title="Log density trace plots", size=(1000,500))
 plot!(p, [stats_HMC[i][:log_density] for i in 1:n_samples], label="HMC", subplot=1,color="coral2")#, ylim=(-1000,-920))
 plot!(p, [stats_NUTS[i][:log_density] for i in 1:n_samples], label="NUTS", subplot=2)#, ylim=(-1000,-920))
 plot!(p, samples_MCHMC[end,:], label="MCHMC", subplot=3,color="blue2")#, ylim=(-1000,-920))
-savefig("plots/traceplot_nside_$nside.pdf")
+savefig("traceplot_nside_$nside.pdf")
 
 
 
