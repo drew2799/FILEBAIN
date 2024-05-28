@@ -1,4 +1,3 @@
-using Turing
 using Distributions
 using Plots
 using StatsPlots
@@ -10,7 +9,6 @@ using LogDensityProblemsAD
 using ProgressMeter
 using MicroCanonicalHMC
 using MuseInference
-using LaTeXStrings
 using AbstractDifferentiation
 using StatsBase
 using StatsFuns
@@ -81,6 +79,9 @@ adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.75, integr
 t = time()
 samples_HMC, stats_HMC = sample(ham, kernel, θ₀, n_samples, adaptor, n_adapts; drop_warmup = true, progress=true, verbose=true)
 HMC_t = time()-t
+
+CSV.write("unmask_HMC_stats_n8.csv", DataFrame(stats_HMC[1:1_000]))
+CSV.write("unmask_HMC_samples_n8.csv", permutedims(DataFrame(samples_HMC[1:1_000], :auto)))
 
 HMC_ess, HMC_rhat = Summarize(samples_HMC)
 println(mean(HMC_ess), "\n")
