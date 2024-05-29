@@ -73,7 +73,7 @@ integrator = Leapfrog(initial_ϵ)
 kernel = HMCKernel(Trajectory{EndPointTS}(integrator, FixedNSteps(n_LF)))
 adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.75, integrator))
 
-Threads.@threads for i in 1:nchains
+Threads.@threads for i in 1:n_chains
 
     alm₀ = synalm(gen_Cl)
     Cℓ₀ = alm2cl(alm₀)
