@@ -20,8 +20,8 @@ using ChainRules.ChainRulesCore
 using Healpix
 using BenchmarkTools
 using Pathfinder
-include("../../HEALPIX_utils.jl")
-include("../../UTILITIES.jl")
+include("HEALPIX_utils.jl")
+include("UTILITIES.jl")
 include("funcs.jl")
 
 ProgressMeter.ijulia_behavior(:clear)
