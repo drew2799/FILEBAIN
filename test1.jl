@@ -20,6 +20,7 @@ using ChainRules.ChainRulesCore
 using Healpix
 using BenchmarkTools
 using Pathfinder
+using Threads
 include("HEALPIX_utils.jl")
 include("UTILITIES.jl")
 include("funcs.jl")
@@ -27,8 +28,8 @@ include("funcs.jl")
 ProgressMeter.ijulia_behavior(:clear)
 Random.seed!(1123)
 
-nside = 8
-lmax = 15
+nside = 64
+lmax = 127
 
 realiz_Dl = CSV.read("Capse_Cl.csv", DataFrame)[1:lmax-1,1]
 realiz_Cl = dl2cl(realiz_Dl, 2)
@@ -47,13 +48,9 @@ gen_alm = map2alm(gen_map, lmax=lmax)
 gen_Cl = anafast(gen_map, lmax=lmax)
 gen_θ = vcat(x_vecmat2vec(from_healpix_alm_to_alm([gen_alm], lmax, 1), lmax, 1), Cl2Kl(gen_Cl))
 
-alm₀ = synalm(gen_Cl)
-Cℓ₀ = alm2cl(alm₀)
-θ₀ = vcat(x_vecmat2vec(from_healpix_alm_to_alm([alm₀], lmax, 1), lmax, 1), Cl2Kl(Cℓ₀))
+g = gradient(x->NegLogPosterior(x), gen_θ)
 
-g = gradient(x->NegLogPosterior(x), θ₀)
-
-d = length(θ₀)
+d = length(gen_θ)
 
 struct LogTargetDensity
     dim::Int
@@ -66,7 +63,7 @@ LogDensityProblemsAD.capabilities(::Type{LogTargetDensity}) = LogDensityProblems
 ℓπ = LogTargetDensity(d)
 n_LF = 50
 
-n_samples, n_adapts = 3_000, 2_000
+n_samples, n_adapts, n_chains = 10_000, 10_000, 2
 
 metric = DiagEuclideanMetric(d)
 ham = Hamiltonian(metric, ℓπ, Zygote)
@@ -76,15 +73,24 @@ integrator = Leapfrog(initial_ϵ)
 kernel = HMCKernel(Trajectory{EndPointTS}(integrator, FixedNSteps(n_LF)))
 adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.75, integrator))
 
-t = time()
-samples_HMC, stats_HMC = sample(ham, kernel, θ₀, n_samples, adaptor, n_adapts; drop_warmup = true, progress=true, verbose=true)
-HMC_t = time()-t
+Threads.@threads for i in 1:nchains
 
-CSV.write("unmask_HMC_stats_n8.csv", DataFrame(stats_HMC[1:1_000]))
-CSV.write("unmask_HMC_samples_n8.csv", permutedims(DataFrame(samples_HMC[1:1_000], :auto)))
+    alm₀ = synalm(gen_Cl)
+    Cℓ₀ = alm2cl(alm₀)
+    θ₀ = vcat(x_vecmat2vec(from_healpix_alm_to_alm([alm₀], lmax, 1), lmax, 1), Cl2Kl(Cℓ₀))
 
-HMC_ess, HMC_rhat = Summarize(samples_HMC)
-println(mean(HMC_ess), "\n")
-println(mean(HMC_t), "\n")
-h = histogram(HMC_rhat, label="HMC", color="coral2")
-display(h)
+    t = time()
+    samples_HMC, stats_HMC = sample(ham, kernel, θ₀, n_samples, adaptor, n_adapts; 
+                                    drop_warmup = true)#, progress=true, verbose=true)
+    HMC_t = time()-t
+
+    CSV.write("unmask_HMC_stats_n64_chain$i.csv", DataFrame(stats_HMC[1:10_000]))
+    CSV.write("unmask_HMC_samples_n64_chain$i.csv", permutedims(DataFrame(samples_HMC[1:10_000], :auto)))
+
+    HMC_ess, HMC_rhat = Summarize(samples_HMC)
+    CSV.write("unmask_HMC_perf_n64_chain$i.csv", DataFrame(N_adapt=n_adapt, N_samples=n_samples, 
+    ESS=mean(HMC_ess), time=HMC_t))
+
+    samples_HMC, stats_HMC = 0
+    
+end
